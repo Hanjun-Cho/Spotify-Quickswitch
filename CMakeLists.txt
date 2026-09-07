@@ -13,6 +13,7 @@ add_executable(SpotifyQuickWheel
     src/Input.cpp
     src/Window.cpp
     src/Wheel.cpp
+    src/Spotify.cpp
 )
 
 target_include_directories(SpotifyQuickWheel PRIVATE include)

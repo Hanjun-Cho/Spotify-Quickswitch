@@ -1,9 +1,16 @@
 #include "Wheel.h"
 #include "Window.h"
 #include "Input.h"
+#include "Spotify.h"
 #include <iostream>
 
 int main() {
+    SpotifyAuth auth;
+    if (!auth.ensureAuthenticated()) {
+        std::cerr << "Spotify authentication failed." << std::endl;
+        return 1;
+    }
+
     Window window;
     Wheel wheel;
 

@@ -12,12 +12,13 @@ class Window {
 
         void show();
         void hide(Wheel wheel);
-        void setPosition(int x, int y);
+        void setMonitor(MONITORINFO* monitor);
 
         void updateSelectedAction(POINT cursor);
         void update(POINT cursor);
 
         void drawCircle(float radius, float x, float y);
+        void drawBorderedCircle(float border, float radius, float x, float y, SDL_Color outerColor, SDL_Color innerColor);
         void render();
 
     private:
@@ -30,12 +31,19 @@ class Window {
         WheelAction actions[4] = {
             WheelAction::Previous,
             WheelAction::PlayPause,
-            WheelAction::Next,
-            WheelAction::Cancel
+            WheelAction::Cancel,
+            WheelAction::Next
         };
 
         WheelAction selectedAction = WheelAction::Previous;
         int buttonCount = std::size(actions);
+
+        int buttonWidthTotal = (buttonCount * buttonRadius * 2) + ((buttonCount - 1) * buttonOffset);
+
+        SDL_Color defaultColor = {69, 85, 114, 255};
+        SDL_Color selectedColor = {161, 189, 240, 255};
+        SDL_Color defaultBorderColor = {48, 60, 82, 255};
+        SDL_Color borderColor = defaultColor;
 
         SDL_Window* window;
         SDL_Renderer* renderer;

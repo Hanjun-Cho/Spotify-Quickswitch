@@ -14,6 +14,7 @@ int main() {
         bool bothHeld = Input::altHeld() && Input::controlHeld();
         POINT cursor = Input::getCursor();
         MONITORINFO info = Input::getMonitor();
+        window.setMonitor(&info);
 
         if (!isActive && bothHeld) {
             isActive = true;
@@ -26,14 +27,6 @@ int main() {
             continue;
         }
 
-        int monitorWidth = info.rcMonitor.right - info.rcMonitor.left;
-        int monitorHeight = info.rcMonitor.bottom - info.rcMonitor.top;
-        int x = info.rcMonitor.left + ((monitorWidth + 1) / 2);
-        int y = info.rcMonitor.top + ((monitorHeight + 1) / 2);
-
-        window.setPosition(
-            x, y
-        );
 
         SDL_Event event;
         while (SDL_PollEvent(&event)) {

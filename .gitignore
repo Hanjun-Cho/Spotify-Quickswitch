@@ -1,0 +1,24 @@
+# Build output
+build/
+
+# Vendored third-party libraries
+vendor/SDL/
+
+# Visual Studio / CMake generated files
+.vs/
+out/
+CMakeUserPresets.json
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+
+# IDE
+.vscode/
+.idea/
+*.user
+*.suo
+
+# OS
+.DS_Store
+Thumbs.db

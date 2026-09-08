@@ -23,17 +23,17 @@ int main() {
     Input::startHook();
 
     while (true) {
-        bool bothHeld = Input::altHeld() && Input::controlHeld();
+        bool allHeld = Input::controlHeld() && Input::altHeld() && Input::qHeld();
         POINT cursor = Input::getCursor();
         MONITORINFO info = Input::getMonitor();
         window.setMonitor(&info);
 
-        if (!isActive && bothHeld) {
+        if (!isActive && allHeld) {
             isActive = true;
             window.show();
         }
 
-        if (isActive && !bothHeld) {
+        if (isActive && !allHeld) {
             isActive = false;
             window.hide(wheel);
             continue;

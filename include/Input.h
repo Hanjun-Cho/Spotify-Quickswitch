@@ -6,8 +6,9 @@ namespace Input {
     void startHook();
     void stopHook();
     
-    bool altHeld();
     bool controlHeld();
+    bool altHeld();
+    bool qHeld();
 
     POINT getCursor();
     MONITORINFO getMonitor();

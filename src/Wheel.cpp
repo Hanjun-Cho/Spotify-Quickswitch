@@ -21,6 +21,7 @@ void Wheel::PerformAction(WheelAction action) {
 
 void Wheel::Previous() {
     std::cout << "previous" << std::endl;
+    spotify->previous();
 }
 
 void Wheel::PlayPause() {
@@ -30,4 +31,5 @@ void Wheel::PlayPause() {
 
 void Wheel::Next() {
     std::cout << "next" << std::endl;
+    spotify->next();
 }

@@ -30,6 +30,8 @@ class Spotify {
 
         void play();
         void pause();
+        void previous();
+        void next();
 
         void startPolling();
         void stopPolling();

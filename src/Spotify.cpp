@@ -112,9 +112,17 @@ void Spotify::pollLoop() {
 }
 
 void Spotify::play() {
-    std::string json = Http::put(L"api.spotify.com", L"/v1/me/player/play", auth->getAccessToken());
+    Http::put(L"api.spotify.com", L"/v1/me/player/play", auth->getAccessToken());
 }
 
 void Spotify::pause() {
-    std::string json = Http::put(L"api.spotify.com", L"/v1/me/player/pause", auth->getAccessToken());
+    Http::put(L"api.spotify.com", L"/v1/me/player/pause", auth->getAccessToken());
+}
+
+void Spotify::previous() {
+    Http::post(L"api.spotify.com", L"/v1/me/player/previous", auth->getAccessToken());
+}
+
+void Spotify::next() {
+    Http::post(L"api.spotify.com", L"/v1/me/player/next", auth->getAccessToken());
 }

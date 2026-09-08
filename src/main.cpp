@@ -1,7 +1,7 @@
 #include "Wheel.h"
 #include "Window.h"
 #include "Input.h"
-#include "Spotify.h"
+#include "SpotifyAuth.h"
 #include <iostream>
 
 int main() {

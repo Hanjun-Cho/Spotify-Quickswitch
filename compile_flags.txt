@@ -1,0 +1,10 @@
+-D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH=1
+--target=x86_64-pc-windows-msvc
+-std=c++17
+-I/mnt/c/Program Files/Microsoft Visual Studio/18/Community/VC/Tools/MSVC/14.50.35717/include
+-I/mnt/c/Program Files (x86)/Windows Kits/10/Include/10.0.26100.0/ucrt
+-I/mnt/c/Program Files (x86)/Windows Kits/10/Include/10.0.26100.0/shared
+-I/mnt/c/Program Files (x86)/Windows Kits/10/Include/10.0.26100.0/um
+-I/mnt/c/Program Files (x86)/Windows Kits/10/Include/10.0.26100.0/winrt
+-Iinclude
+-Ivendor/SDL/include

@@ -48,6 +48,7 @@ int main() {
         }
 
         window.update(cursor);
+        window.updateAlbumArt(spotify.getCurrentTrack());
 
         window.render();
         SDL_Delay(10);

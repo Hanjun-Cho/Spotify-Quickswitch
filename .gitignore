@@ -3,6 +3,8 @@ build/
 
 # Vendored third-party libraries
 vendor/SDL/
+vendor/SDL_ttf/
+vendor/SDL_image/
 
 # Visual Studio / CMake generated files
 .vs/

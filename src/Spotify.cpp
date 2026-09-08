@@ -38,7 +38,13 @@ SpotifyTrack Spotify::getCurrentlyPlayingTrack() {
     if (!item || item->type != JsonNode::Type::Object) { return track; }
 
     const JsonNode* id = item->get("id");
-    if (id && id->type == JsonNode::Type::String) { track.id = id->stringValue; }
+    if (id && id->type == JsonNode::Type::String) {
+        {
+            std::lock_guard<std::mutex> lock(trackMutex);
+            if (id->stringValue == currentTrack.id) { return currentTrack; }
+        }
+        track.id = id->stringValue;
+    }
 
     const JsonNode* trackName = item->get("name");
     if (trackName && trackName->type == JsonNode::Type::String) { track.trackName = trackName->stringValue; }
@@ -73,6 +79,11 @@ SpotifyTrack Spotify::getCurrentlyPlayingTrack() {
         currentTrack = track;
     }
     return track;
+}
+
+SpotifyTrack Spotify::getCurrentTrack() {
+    std::lock_guard<std::mutex> lock(trackMutex);
+    return currentTrack;
 }
 
 SpotifyTrack Spotify::playPause() {

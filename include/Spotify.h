@@ -26,6 +26,7 @@ class Spotify {
         Spotify(SpotifyAuth* auth);
 
         SpotifyTrack getCurrentlyPlayingTrack();
+        SpotifyTrack getCurrentTrack();
         SpotifyTrack playPause();
 
         void play();

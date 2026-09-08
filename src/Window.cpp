@@ -4,6 +4,7 @@
 #include "Http.h"
 #include <SDL3_image/SDL_image.h>
 #include <SDL3_ttf/SDL_ttf.h>
+#include <iterator>
 
 namespace {
     std::wstring widen(const std::string& s) {
@@ -61,6 +62,7 @@ Window::Window() {
         std::cout << "TTF_Init failed: " << SDL_GetError() << std::endl;
     }
     initFonts();
+    loadIcons();
 
     SDL_PropertiesID props = SDL_GetWindowProperties(window);
     HWND hwnd = (HWND)SDL_GetPointerProperty(props, SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
@@ -72,6 +74,7 @@ Window::Window() {
 
 Window::~Window() {
     if (albumTexture) { SDL_DestroyTexture(albumTexture); }
+    destroyIcons();
     destroyText();
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
@@ -101,12 +104,12 @@ void Window::updateSelectedAction(POINT cursor) {
     int cy = cursor.y;
 
     int windowX, windowY;
+    int gap = width / std::size(actions);
     SDL_GetWindowPosition(window, &windowX, &windowY);
 
     bool triggered = false;
     for (int i = 0; i < buttonCount; i++) {
-        int xOffset = (width / 2) - (buttonWidthTotal / 2);
-        int bx = windowX + xOffset + ((i * buttonRadius * 2) + (i * buttonOffset) - (buttonOffset / 2));
+        int bx = windowX + (i * gap);
         if (cx >= bx) {
             selectedAction = actions[i];
             triggered = true;
@@ -126,6 +129,8 @@ void Window::updateAlbumArt(const SpotifyTrack& track) {
     if (track.albumImageURL != lastAlbumURL) {
         loadAlbumImage(track.albumImageURL);
     }
+
+    isPlaying = track.isPlaying;
 
     if (track.trackName != lastTitle || track.artists != lastArtists) {
         lastTitle = track.trackName;
@@ -299,6 +304,86 @@ void Window::loadAlbumImage(const std::string& url) {
     if (!albumTexture) {
         std::cout << "Failed to build album art texture" << std::endl;
     }
+}
+
+std::string Window::iconPath(const char* filename) const {
+    std::vector<std::string> candidates;
+
+    // Executable-relative (works regardless of launch cwd). Exe typically
+    // lives in build/Release or build/Debug, so assets/ may be up two levels.
+    const char* base = SDL_GetBasePath();
+    if (base) {
+        candidates.push_back(std::string(base) + "assets/" + filename);
+        candidates.push_back(std::string(base) + "../../assets/" + filename);
+        candidates.push_back(std::string(base) + "../../../assets/" + filename);
+    }
+
+    // Working-directory-relative fallback.
+    candidates.push_back(std::string("assets/") + filename);
+
+    for (const std::string& c : candidates) {
+        SDL_IOStream* io = SDL_IOFromFile(c.c_str(), "rb");
+        if (io) {
+            SDL_CloseIO(io);
+            return c;
+        }
+    }
+    return candidates.front();
+}
+
+SDL_Texture* Window::loadIconTexture(const char* filename) {
+    std::string path = iconPath(filename);
+    SDL_Surface* surf = IMG_Load(path.c_str());
+    if (!surf) {
+        std::cout << "Failed to load icon " << path << ": " << SDL_GetError() << std::endl;
+        return nullptr;
+    }
+    SDL_Texture* tex = SDL_CreateTextureFromSurface(renderer, surf);
+    SDL_DestroySurface(surf);
+    if (tex) {
+        SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_BLEND);
+    }
+    return tex;
+}
+
+void Window::loadIcons() {
+    previousIcon = loadIconTexture("previous.svg");
+    playIcon = loadIconTexture("play.svg");
+    pauseIcon = loadIconTexture("pause.svg");
+    nextIcon = loadIconTexture("next.svg");
+}
+
+void Window::destroyIcons() {
+    if (previousIcon) { SDL_DestroyTexture(previousIcon); previousIcon = nullptr; }
+    if (playIcon) { SDL_DestroyTexture(playIcon); playIcon = nullptr; }
+    if (pauseIcon) { SDL_DestroyTexture(pauseIcon); pauseIcon = nullptr; }
+    if (nextIcon) { SDL_DestroyTexture(nextIcon); nextIcon = nullptr; }
+}
+
+SDL_Texture* Window::iconForAction(WheelAction action) const {
+    switch (action) {
+        case WheelAction::Previous:  return previousIcon;
+        case WheelAction::PlayPause: return isPlaying ? pauseIcon : playIcon;
+        case WheelAction::Next:      return nextIcon;
+        default:                     return nullptr;
+    }
+}
+
+void Window::drawActionIcon(WheelAction action, float cx, float cy) {
+    SDL_Texture* icon = iconForAction(action);
+    if (!icon) { return; }
+
+    float w = 0.0f, h = 0.0f;
+    if (!SDL_GetTextureSize(icon, &w, &h)) { return; }
+    if (w <= 0.0f || h <= 0.0f) { return; }
+
+    // Scale to fit within iconSize px while preserving aspect ratio.
+    float scale = (float)iconSize / (w > h ? w : h);
+    float dw = w * scale;
+    float dh = h * scale;
+
+    SDL_FRect dst = { cx - dw / 2.0f, cy - dh / 2.0f, dw, dh };
+    SDL_RenderTexture(renderer, icon, nullptr, &dst);
 }
 
 SDL_Texture* Window::makeAlbumTexture(SDL_Surface* art) {
@@ -532,6 +617,9 @@ void Window::render() {
     SDL_RenderClear(renderer);
 
     float t = (float)albumBorderThickness;
+
+    albumArea.x = (width / 2) - (albumAreaWidth / 2);
+
     if (t > 0.0f) {
         // Outer rounded panel in the border color; the content drawn inside
         // reveals a border ring of `t` pixels.
@@ -546,7 +634,7 @@ void Window::render() {
         // With a border, the interior sits flush against the ring so it must be
         // crisp; only anti-alias it when there's no border and it meets the
         // background directly.
-        SDL_SetRenderDrawColor(renderer, defaultColor.r, defaultColor.g, defaultColor.b, 255);
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         if (t > 0.0f) {
             drawRoundedRectSolid(renderer, albumArea.x, albumArea.y, albumArea.w, albumArea.h);
         }
@@ -581,6 +669,22 @@ void Window::render() {
             SDL_FRect dst = { albumArea.x + (albumArea.w - aw) / 2.0f, blockY + th + gap, aw, ah };
             SDL_RenderTexture(renderer, artistTexture, nullptr, &dst);
         }
+    }
+
+    int gap = width / std::size(actions);
+
+    for (int i = 0; i < std::size(actions); i++) {
+        int x = ((i+1) * gap) - (gap / 2);
+        int y = height / 2;
+
+        if (selectedAction == actions[i]) {
+            drawBorderedCircle(1, buttonRadius, x, y, borderColor, selectedColor);
+        }
+        else {
+            drawBorderedCircle(1, buttonRadius, x, y, borderColor, defaultColor);
+        }
+
+        drawActionIcon(actions[i], (float)x, (float)y);
     }
 
     SDL_RenderPresent(renderer);

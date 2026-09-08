@@ -32,6 +32,11 @@ class Window {
         void drawRoundedRectSolid(SDL_Renderer* renderer, float x, float y, float w, float h);
         void render();
 
+        void loadIcons();
+        void destroyIcons();
+        void drawActionIcon(WheelAction action, float cx, float cy);
+        SDL_Texture* iconForAction(WheelAction action) const;
+
     private:
         int width;
         int height;
@@ -39,8 +44,10 @@ class Window {
         int buttonRadius = 36;
         int buttonOffset = 60;
 
-        WheelAction actions[1] = {
-            WheelAction::Cancel
+        WheelAction actions[3] = {
+            WheelAction::Previous,
+            WheelAction::PlayPause,
+            WheelAction::Next
         };
 
         WheelAction selectedAction = WheelAction::Previous;
@@ -56,7 +63,8 @@ class Window {
         SDL_Window* window;
         SDL_Renderer* renderer;
 
-        SDL_FRect albumArea = {0, 15, 300, 75};
+        float albumAreaWidth = 300;
+        SDL_FRect albumArea = {0, 15, albumAreaWidth, 75};
         int albumBorderThickness = 2;
         SDL_Color albumBorderColor = {0, 0, 0, 255};
 
@@ -80,9 +88,18 @@ class Window {
         SDL_Texture* titleTexture = nullptr;
         SDL_Texture* artistTexture = nullptr;
 
+        bool isPlaying = false;
+
+        SDL_Texture* previousIcon = nullptr;
+        SDL_Texture* playIcon = nullptr;
+        SDL_Texture* pauseIcon = nullptr;
+        SDL_Texture* nextIcon = nullptr;
+
+        int iconSize = 30;
+
         SDL_Color textColor = {255, 255, 255, 255};
         SDL_Color subTextColor = {215, 222, 230, 255};
-        SDL_Color textBackdrop = {0, 0, 0, 100};
+        SDL_Color textBackdrop = {0, 0, 0, 80};
         int titleSize = 18;
         int artistSize = 12;
         int textPad = 18;
@@ -95,4 +112,6 @@ class Window {
         void destroyText();
         void rebuildText();
         SDL_Texture* renderText(const std::string& text, struct TTF_Font* font, SDL_Color color, int maxWidth);
+        SDL_Texture* loadIconTexture(const char* filename);
+        std::string iconPath(const char* filename) const;
 };

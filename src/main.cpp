@@ -1,3 +1,4 @@
+#include "Spotify.h"
 #include "Wheel.h"
 #include "Window.h"
 #include "Input.h"
@@ -10,9 +11,13 @@ int main() {
         std::cerr << "Spotify authentication failed." << std::endl;
         return 1;
     }
+    Spotify spotify(&auth);
+    spotify.startPolling();
+
+    SpotifyTrack track = spotify.getCurrentlyPlayingTrack();
 
     Window window;
-    Wheel wheel;
+    Wheel wheel(&spotify);
 
     bool isActive = false;
     Input::startHook();

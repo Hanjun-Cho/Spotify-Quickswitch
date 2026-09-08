@@ -1,6 +1,8 @@
 #include "Wheel.h"
 #include <iostream>
 
+Wheel::Wheel(Spotify* spotify) : spotify(spotify) {}
+
 void Wheel::PerformAction(WheelAction action) {
     switch (action) {
         case WheelAction::Previous:
@@ -23,6 +25,7 @@ void Wheel::Previous() {
 
 void Wheel::PlayPause() {
     std::cout << "play pause" << std::endl;
+    spotify->playPause();
 }
 
 void Wheel::Next() {

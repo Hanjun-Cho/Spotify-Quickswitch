@@ -1,4 +1,5 @@
 #include "SpotifyAuth.h"
+#include "Http.h"
 
 #include <winsock2.h>
 #include <windows.h>
@@ -11,83 +12,24 @@
 #include <iomanip>
 #include <random>
 #include <sstream>
-#include <vector>
 #include <wincrypt.h>
-#include <winhttp.h>
 #include <shellapi.h>
 
 #pragma comment(lib, "crypt32.lib")
 #pragma comment(lib, "bcrypt.lib")
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "shell32.lib")
-#pragma comment(lib, "winhttp.lib")
+
+using Http::JsonNode;
+using Http::parseJson;
+using Http::postRequest;
 
 namespace {
-    std::string performTokenRequest(const std::wstring& host, const std::wstring& path, const std::string& formBody) {
-        HINTERNET session = WinHttpOpen(L"SpotifyQuickWheel/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
-        if (!session) { return {}; }
-
-        HINTERNET connect = WinHttpConnect(session, host.c_str(), INTERNET_DEFAULT_HTTPS_PORT, 0);
-        if (!connect) {
-            WinHttpCloseHandle(session);
-            return {};
-        }
-
-        HINTERNET request = WinHttpOpenRequest(connect, L"POST", path.c_str(), nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE);
-        if (!request) {
-            WinHttpCloseHandle(connect);
-            WinHttpCloseHandle(session);
-            return {};
-        }
-
-        std::string response;
-        const wchar_t* headers = L"Content-Type: application/x-www-form-urlencoded";
-
-        if (WinHttpSendRequest(request, headers, (DWORD)-1, const_cast<char*>(formBody.data()), (DWORD)formBody.size(), (DWORD)formBody.size(), 0) 
-                && WinHttpReceiveResponse(request, nullptr)) {
-            DWORD status = 0;
-            DWORD statusSize = sizeof(status);
-            WinHttpQueryHeaders(request, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, WINHTTP_HEADER_NAME_BY_INDEX, &status, &statusSize, WINHTTP_NO_HEADER_INDEX);
-
-            if (status == 200) {
-                DWORD available = 0;
-                do {
-                    if (!WinHttpQueryDataAvailable(request, &available)) { break; }
-
-                    std::vector<char> buffer(available ? available : 1);
-                    DWORD read = 0;
-
-                    if (!WinHttpReadData(request, buffer.data(), (DWORD)buffer.size(), &read)) { break; }
-
-                    response.append(buffer.data(), read);
-                } while (available > 0);
-            }
-        }
-
-        WinHttpCloseHandle(request);
-        WinHttpCloseHandle(connect);
-        WinHttpCloseHandle(session);
-
-        return response;
-    }
-
-    std::string jsonStringValue(const std::string& json, const char* key) {
-        std::string needle = std::string("\"") + key + "\"";
-        size_t pos = json.find(needle);
-
-        if (pos == std::string::npos) { return {}; }
-
-        pos = json.find(':', pos);
-        if (pos == std::string::npos) { return {}; }
-
-        pos = json.find('"', pos);
-        if (pos == std::string::npos) { return {}; }
-
-        ++pos;
-        size_t end = json.find('"', pos);
-        if (end == std::string::npos) { return {}; }
-
-        return json.substr(pos, end - pos);
+    std::string jsonString(const std::string& json, const char* key) {
+        JsonNode root = parseJson(json);
+        const JsonNode* value = root.get(key);
+        if (value && value->type == JsonNode::Type::String) { return value->stringValue; }
+        return {};
     }
 }
 
@@ -373,11 +315,11 @@ bool SpotifyAuth::exchangeCode(const std::string& code) {
          << "&client_id=" << urlEncode(clientId)
          << "&code_verifier=" << urlEncode(codeVerifier);
 
-    std::string json = performTokenRequest(L"accounts.spotify.com", L"/api/token", body.str());
+    std::string json = postRequest(L"accounts.spotify.com", L"/api/token", body.str());
     if (json.empty()) { return false; }
 
-    accessToken = jsonStringValue(json, "access_token");
-    std::string newRefreshToken = jsonStringValue(json, "refresh_token");
+    accessToken = jsonString(json, "access_token");
+    std::string newRefreshToken = jsonString(json, "refresh_token");
     if (!newRefreshToken.empty()) {
         refreshToken = newRefreshToken;
     }
@@ -393,15 +335,15 @@ bool SpotifyAuth::refreshAccessToken() {
          << "&refresh_token=" << urlEncode(refreshToken)
          << "&client_id=" << urlEncode(clientId);
 
-    std::string json = performTokenRequest(L"accounts.spotify.com", L"/api/token", body.str());
+    std::string json = postRequest(L"accounts.spotify.com", L"/api/token", body.str());
     if (json.empty()) { return false; }
 
-    std::string newAccessToken = jsonStringValue(json, "access_token");
+    std::string newAccessToken = jsonString(json, "access_token");
     if (newAccessToken.empty()) { return false; }
 
     accessToken = newAccessToken;
 
-    std::string newRefreshToken = jsonStringValue(json, "refresh_token");
+    std::string newRefreshToken = jsonString(json, "refresh_token");
     if (!newRefreshToken.empty()) {
         refreshToken = newRefreshToken;
     }
@@ -438,4 +380,8 @@ std::string SpotifyAuth::loadRefreshToken() {
         std::getline(in, token);
     }
     return token;
+}
+
+std::string SpotifyAuth::getAccessToken() {
+    return urlEncode(accessToken);
 }

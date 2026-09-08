@@ -10,6 +10,8 @@ class SpotifyAuth {
         bool ensureAuthenticated();
         bool isAuthenticated() const;
 
+        std::string getAccessToken();
+
     private:
         std::string clientId = "8706797d0a57415fb518a714241a7dab";
 

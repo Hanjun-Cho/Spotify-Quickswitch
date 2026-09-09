@@ -63,6 +63,7 @@ Window::Window() {
     }
     initFonts();
     loadIcons();
+    buildButtonShadows();
 
     SDL_PropertiesID props = SDL_GetWindowProperties(window);
     HWND hwnd = (HWND)SDL_GetPointerProperty(props, SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
@@ -74,6 +75,7 @@ Window::Window() {
 
 Window::~Window() {
     if (albumTexture) { SDL_DestroyTexture(albumTexture); }
+    destroyButtonShadows();
     destroyIcons();
     destroyText();
     SDL_DestroyRenderer(renderer);
@@ -377,12 +379,29 @@ void Window::drawActionIcon(WheelAction action, float cx, float cy) {
     if (!SDL_GetTextureSize(icon, &w, &h)) { return; }
     if (w <= 0.0f || h <= 0.0f) { return; }
 
-    // Scale to fit within iconSize px while preserving aspect ratio.
-    float scale = (float)iconSize / (w > h ? w : h);
+    // Per-icon optical adjustment (px, applied to the drawn center). SVG glyphs
+    // are geometrically centered by their bounding box, but their visible mass
+    // is not. These nudge each glyph to look centered. Tune to taste.
+    float ox = 0.0f;
+    float oy = 0.0f;
+    switch (action) {
+        case WheelAction::Previous: break;                       // mirror-symmetric
+        case WheelAction::PlayPause:
+            // Play triangle's centroid sits left of its bbox, so nudge it right;
+            // pause bars are symmetric.
+            ox = isPlaying ? 0.0f : 2.0f;
+            break;
+        case WheelAction::Next: break;                           // mirror-symmetric
+        default: break;
+    }
+
+    // Scale to fit within the (reduced) icon box while preserving aspect ratio.
+    float display = (float)iconSize * iconSizeScale;
+    float scale = display / (w > h ? w : h);
     float dw = w * scale;
     float dh = h * scale;
 
-    SDL_FRect dst = { cx - dw / 2.0f, cy - dh / 2.0f, dw, dh };
+    SDL_FRect dst = { cx + ox - dw / 2.0f, cy + oy - dh / 2.0f, dw, dh };
     SDL_RenderTexture(renderer, icon, nullptr, &dst);
 }
 
@@ -488,6 +507,53 @@ void Window::applyInnerShadow(SDL_Surface* dst) {
             SDL_WriteSurfacePixel(dst, x, y, nr, ng, nb, a);
         }
     }
+}
+
+void Window::destroyButtonShadows() {
+    if (buttonShadowTexture) { SDL_DestroyTexture(buttonShadowTexture); buttonShadowTexture = nullptr; }
+    buttonShadowSide = 0;
+}
+
+void Window::buildButtonShadows() {
+    destroyButtonShadows();
+
+    // Soft drop shadow: the button's silhouette with a feathered edge. Drawn a
+    // little below each button it reads as a subtle shadow lifting it off the
+    // background. Neutral black so it never tints the buttons.
+    const float shadowRadius = (float)buttonRadius;
+    const float blur = 6.0f;
+    const float shadowOpacity = 0.35f;
+
+    buttonShadowSide = (int)std::ceil(2.0f * (shadowRadius + blur) + 1.0f);
+    SDL_Surface* shadowSurf = SDL_CreateSurface(buttonShadowSide, buttonShadowSide, SDL_PIXELFORMAT_ARGB8888);
+    if (!shadowSurf) { return; }
+
+    SDL_FillSurfaceRect(shadowSurf, nullptr, 0);
+    float c = (buttonShadowSide - 1) / 2.0f;
+    for (int y = 0; y < buttonShadowSide; ++y) {
+        for (int x = 0; x < buttonShadowSide; ++x) {
+            float dx = (x + 0.5f) - c;
+            float dy = (y + 0.5f) - c;
+            float d = std::sqrt(dx * dx + dy * dy);
+
+            float a;
+            if (d < shadowRadius) {
+                a = shadowOpacity;
+            }
+            else if (d < shadowRadius + blur) {
+                a = shadowOpacity * (1.0f - (d - shadowRadius) / blur);
+            }
+            else {
+                continue;
+            }
+
+            SDL_WriteSurfacePixel(shadowSurf, x, y, 0, 0, 0, (Uint8)(255.0f * a + 0.5f));
+        }
+    }
+
+    buttonShadowTexture = SDL_CreateTextureFromSurface(renderer, shadowSurf);
+    SDL_DestroySurface(shadowSurf);
+    if (buttonShadowTexture) { SDL_SetTextureBlendMode(buttonShadowTexture, SDL_BLENDMODE_BLEND); }
 }
 
 void Window::drawScanline(float xl, float xr, int yy) {
@@ -602,9 +668,6 @@ void Window::drawRoundedRectSolid(SDL_Renderer* renderer, float x, float y, floa
 }
 
 void Window::drawBorderedCircle(float border, float radius, float x, float y, SDL_Color outerColor, SDL_Color innerColor) {
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 230);
-    drawCircle(radius, x + 3, y + 3);
-
     SDL_SetRenderDrawColor(renderer, outerColor.r, outerColor.g, outerColor.b, outerColor.a);
     drawCircle(radius, x, y);
 
@@ -676,6 +739,15 @@ void Window::render() {
     for (int i = 0; i < std::size(actions); i++) {
         int x = ((i+1) * gap) - (gap / 2);
         int y = height / 2;
+
+        // Soft drop shadow just below the button.
+        if (buttonShadowTexture && buttonShadowSide > 0) {
+            float dropY = y + 3.0f;
+            SDL_FRect sh = { (float)x - buttonShadowSide / 2.0f,
+                             dropY - buttonShadowSide / 2.0f,
+                             (float)buttonShadowSide, (float)buttonShadowSide };
+            SDL_RenderTexture(renderer, buttonShadowTexture, nullptr, &sh);
+        }
 
         if (selectedAction == actions[i]) {
             drawBorderedCircle(1, buttonRadius, x, y, borderColor, selectedColor);

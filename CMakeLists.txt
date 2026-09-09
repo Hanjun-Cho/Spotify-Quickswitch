@@ -34,7 +34,13 @@ add_executable(SpotifyQuickWheel
     src/Http.cpp
     src/SpotifyAuth.cpp
     src/Spotify.cpp
+    src/Tray.cpp
 )
+
+# Run as a GUI app (no console window). Combined with the /ENTRY pragma in
+# main.cpp this uses int main() with the Windows subsystem.
+set_target_properties(SpotifyQuickWheel PROPERTIES WIN32_EXECUTABLE ON)
 
 target_include_directories(SpotifyQuickWheel PRIVATE include)
 target_link_libraries(SpotifyQuickWheel PRIVATE SDL3::SDL3 SDL3_image::SDL3_image SDL3_ttf::SDL3_ttf)
+target_link_libraries(SpotifyQuickWheel PRIVATE shell32)

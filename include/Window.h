@@ -95,7 +95,14 @@ class Window {
         SDL_Texture* pauseIcon = nullptr;
         SDL_Texture* nextIcon = nullptr;
 
+        // Baked button drop shadow, generated once from the current button geometry.
+        SDL_Texture* buttonShadowTexture = nullptr;
+        int buttonShadowSide = 0;
+
         int iconSize = 30;
+        // Icons are drawn a bit smaller than iconSize so they sit comfortably
+        // inside the button face.
+        float iconSizeScale = 0.88f;
 
         SDL_Color textColor = {255, 255, 255, 255};
         SDL_Color subTextColor = {215, 222, 230, 255};
@@ -107,6 +114,8 @@ class Window {
         void loadAlbumImage(const std::string& url);
         SDL_Texture* makeAlbumTexture(SDL_Surface* art);
         void applyInnerShadow(SDL_Surface* dst);
+        void buildButtonShadows();
+        void destroyButtonShadows();
         void initFonts();
         void initFallbackFonts();
         void destroyText();

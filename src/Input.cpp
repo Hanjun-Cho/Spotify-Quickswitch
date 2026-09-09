@@ -7,6 +7,16 @@ namespace {
     bool altDown = false;
     bool qDown = false;
 
+    // A dropped key-up (rare under a low-level hook) would leave a latch stuck
+    // on. Later, merely pressing Ctrl+Alt would then look like the full combo
+    // and pop the wheel open without Q. Reconcile each latch against the real
+    // physical key state before it is read so a lost release self-corrects.
+    void reconcileWithPhysicalState() {
+        if (!(GetAsyncKeyState(VK_CONTROL) & 0x8000)) { controlDown = false; }
+        if (!(GetAsyncKeyState(VK_MENU) & 0x8000)) { altDown = false; }
+        if (!(GetAsyncKeyState('Q') & 0x8000)) { qDown = false; }
+    }
+
     LRESULT CALLBACK keyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
         if (nCode == HC_ACTION) {
             KBDLLHOOKSTRUCT* key = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam);
@@ -41,14 +51,17 @@ namespace Input {
     }
 
     bool controlHeld() {
+        reconcileWithPhysicalState();
         return controlDown;
     }
 
     bool altHeld() {
+        reconcileWithPhysicalState();
         return altDown;
     }
 
     bool qHeld() {
+        reconcileWithPhysicalState();
         return qDown;
     }
 

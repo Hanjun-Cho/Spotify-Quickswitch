@@ -17,6 +17,7 @@ class Window {
         void show();
         void hide(Wheel wheel);
         void setMonitor(MONITORINFO* monitor);
+        void assertTopmost();
 
         void updateSelectedAction(POINT cursor);
         void update(POINT cursor);
@@ -62,6 +63,7 @@ class Window {
 
         SDL_Window* window;
         SDL_Renderer* renderer;
+        HWND hwnd = nullptr;
 
         float albumAreaWidth = 300;
         SDL_FRect albumArea = {0, 15, albumAreaWidth, 75};

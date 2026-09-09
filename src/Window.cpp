@@ -66,10 +66,18 @@ Window::Window() {
     buildButtonShadows();
 
     SDL_PropertiesID props = SDL_GetWindowProperties(window);
-    HWND hwnd = (HWND)SDL_GetPointerProperty(props, SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
+    hwnd = (HWND)SDL_GetPointerProperty(props, SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
     LONG_PTR style = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
 
-    SetWindowLongPtr(hwnd, GWL_EXSTYLE, style | WS_EX_TOPMOST | WS_EX_NOACTIVATE);
+    // WS_EX_TOPMOST keeps the wheel above every normal window; WS_EX_TOOLWINDOW
+    // hides it from the taskbar/Alt-Tab; WS_EX_NOACTIVATE prevents it stealing
+    // focus from the app the user is controlling.
+    SetWindowLongPtr(hwnd, GWL_EXSTYLE, style | WS_EX_TOPMOST | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW);
+    assertTopmost();
+}
+
+void Window::assertTopmost() {
+    if (!hwnd) { return; }
     SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 }
 
@@ -86,6 +94,7 @@ Window::~Window() {
 
 void Window::show() {
     SDL_ShowWindow(window);
+    assertTopmost();
 }
 
 void Window::hide(Wheel wheel) {
@@ -99,6 +108,9 @@ void Window::setMonitor(MONITORINFO* monitor) {
     height = monitor->rcMonitor.bottom - monitor->rcMonitor.top;
     SDL_SetWindowSize(window, width, height);
     SDL_SetWindowPosition(window, monitor->rcMonitor.left, monitor->rcMonitor.top);
+    // Repositioning (done every frame) must not let the wheel sink below other
+    // top-most overlays, so reassert its top-most placement afterward.
+    assertTopmost();
 }
 
 void Window::updateSelectedAction(POINT cursor) {

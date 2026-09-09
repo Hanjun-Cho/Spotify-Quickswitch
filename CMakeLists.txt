@@ -44,3 +44,12 @@ set_target_properties(SpotifyQuickWheel PROPERTIES WIN32_EXECUTABLE ON)
 target_include_directories(SpotifyQuickWheel PRIVATE include)
 target_link_libraries(SpotifyQuickWheel PRIVATE SDL3::SDL3 SDL3_image::SDL3_image SDL3_ttf::SDL3_ttf)
 target_link_libraries(SpotifyQuickWheel PRIVATE shell32)
+
+# Copy the SVG button icons next to the executable so a Release/Debug build is
+# self-contained for its icons. The exe locates them via SDL_GetBasePath()
+# (see Window::iconPath), so they must sit in an assets/ folder beside the exe.
+add_custom_command(TARGET SpotifyQuickWheel POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_SOURCE_DIR}/assets
+            $<TARGET_FILE_DIR:SpotifyQuickWheel>/assets
+    COMMENT "Copying icon assets next to SpotifyQuickWheel.exe")
